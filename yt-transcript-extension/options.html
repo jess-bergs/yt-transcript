@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      width: 380px;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      padding: 20px;
+      color: #1a1a1a;
+    }
+    h2 { margin: 0 0 12px; font-size: 16px; }
+    label { display: block; margin-bottom: 6px; font-weight: 500; }
+    input[type="password"] {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: monospace;
+    }
+    .hint {
+      margin-top: 4px;
+      font-size: 12px;
+      color: #888;
+    }
+    button {
+      margin-top: 14px;
+      padding: 8px 20px;
+      background: #c00;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    button:hover { background: #a00; }
+    #msg {
+      margin-top: 10px;
+      font-size: 13px;
+      color: #16a34a;
+    }
+    select {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      margin-bottom: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h2>YouTube Transcript Settings</h2>
+
+  <label for="api-key">Anthropic API Key</label>
+  <input type="password" id="api-key" placeholder="sk-ant-...">
+  <div class="hint">Stored locally in your browser. Never sent anywhere except api.anthropic.com.</div>
+
+  <label for="model" style="margin-top: 14px;">Model</label>
+  <select id="model">
+    <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (fast, cheap)</option>
+    <option value="claude-sonnet-4-6-20250514" selected>Claude Sonnet 4.6 (balanced)</option>
+    <option value="claude-opus-4-6-20250610">Claude Opus 4.6 (best quality)</option>
+  </select>
+
+  <button id="save">Save</button>
+  <div id="msg"></div>
+
+  <script src="options.js"></script>
+</body>
+</html>

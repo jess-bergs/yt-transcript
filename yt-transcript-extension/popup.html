@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 440px;
+      max-height: 600px;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      color: #1a1a1a;
+      background: #fff;
+    }
+    header {
+      padding: 12px 16px;
+      background: #c00;
+      color: #fff;
+      font-weight: 600;
+      font-size: 16px;
+    }
+    #status {
+      padding: 16px;
+      font-size: 14px;
+      color: #555;
+    }
+    #actions {
+      padding: 0 16px 12px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    #btn-grab {
+      background: #c00;
+      color: #fff;
+    }
+    #btn-grab:hover { background: #a00; }
+    #btn-grab:disabled { background: #ccc; cursor: default; }
+    .secondary-btn {
+      background: #e8e8e8;
+      color: #333;
+      display: none;
+    }
+    .secondary-btn:hover { background: #ddd; }
+    .secondary-btn:disabled { background: #ccc; cursor: default; }
+    #btn-summarize {
+      background: #2563eb;
+      color: #fff;
+      display: none;
+    }
+    #btn-summarize:hover { background: #1d4ed8; }
+    #btn-summarize:disabled { background: #ccc; cursor: default; }
+
+    #prompt-row {
+      display: none;
+      padding: 0 16px 12px;
+    }
+    #prompt-input {
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      resize: vertical;
+      min-height: 36px;
+    }
+    #prompt-input::placeholder { color: #aaa; }
+    #prompt-input:focus { outline: none; border-color: #2563eb; }
+
+    .tab-bar {
+      display: none;
+      border-bottom: 1px solid #eee;
+      padding: 0 16px;
+    }
+    .tab-bar button {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      border-radius: 0;
+      padding: 8px 12px;
+      font-size: 13px;
+      color: #666;
+      cursor: pointer;
+    }
+    .tab-bar button.active {
+      color: #c00;
+      border-bottom-color: #c00;
+      font-weight: 600;
+    }
+
+    .content-box {
+      display: none;
+      max-height: 350px;
+      overflow-y: auto;
+      padding: 12px 16px;
+      font-size: 14px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .content-box.visible { display: block; }
+    #summary-box { line-height: 1.7; }
+    .error { color: #c00; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <header>YouTube Transcript</header>
+  <div id="status">Checking page...</div>
+  <div id="actions">
+    <button id="btn-grab">Get Transcript</button>
+    <button id="btn-summarize" class="">Summarize</button>
+    <button id="btn-copy" class="secondary-btn">Copy</button>
+    <button id="btn-download" class="secondary-btn">Download .txt</button>
+  </div>
+  <div id="prompt-row">
+    <textarea id="prompt-input" rows="2" placeholder="Optional: steer the summary, e.g. &quot;what did person X focus on?&quot; or &quot;list all action items&quot;"></textarea>
+  </div>
+  <div class="tab-bar" id="tab-bar">
+    <button class="active" data-tab="transcript">Full Transcript</button>
+    <button data-tab="summary">Summary</button>
+  </div>
+  <div id="transcript-box" class="content-box"></div>
+  <div id="summary-box" class="content-box"></div>
+  <script src="popup.js"></script>
+</body>
+</html>
