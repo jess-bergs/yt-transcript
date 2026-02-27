@@ -206,27 +206,25 @@ async function fetchTranscriptFromPage(videoId) {
     );
     const pageHtml = await pageResp.text();
 
-    const captionMatch = pageHtml.match(
-      /"captions":\s*(\{.*?"captionTracks".*?\})\s*,\s*"/
-    );
-    if (!captionMatch) {
+    // Find the captions JSON in the page source
+    const marker = '"captions":';
+    const idx = pageHtml.indexOf(marker);
+    if (idx === -1) {
       return { error: "No captions/transcript available for this video." };
     }
 
     let captionsJson;
     try {
-      const raw = captionMatch[1];
+      // Walk from the opening brace, counting depth to find the matching close
+      const start = idx + marker.length;
       let depth = 0;
-      let end = 0;
-      for (let i = 0; i < raw.length; i++) {
-        if (raw[i] === "{") depth++;
-        if (raw[i] === "}") depth--;
-        if (depth === 0) {
-          end = i + 1;
-          break;
-        }
+      let end = start;
+      for (let i = start; i < pageHtml.length; i++) {
+        if (pageHtml[i] === "{") depth++;
+        if (pageHtml[i] === "}") depth--;
+        if (depth === 0) { end = i + 1; break; }
       }
-      captionsJson = JSON.parse(raw.slice(0, end));
+      captionsJson = JSON.parse(pageHtml.slice(start, end));
     } catch {
       return { error: "Could not parse caption data." };
     }
