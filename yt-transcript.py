@@ -1,7 +1,7 @@
 #!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["youtube-transcript-api>=1.0.0", "anthropic>=0.40.0"]
+# dependencies = ["youtube-transcript-api>=1.0.0", "anthropic>=0.40.0", "python-dotenv>=1.0.0"]
 # ///
 """
 YouTube Transcript Extractor + Summarizer
@@ -39,6 +39,10 @@ import re
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api.formatters import TextFormatter
 
@@ -70,8 +74,8 @@ def summarize(transcript: str, prompt: str, model: str) -> str:
 
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
-        print("Error: ANTHROPIC_API_KEY environment variable not set.", file=sys.stderr)
-        print("Set it with: export ANTHROPIC_API_KEY='sk-ant-...'", file=sys.stderr)
+        print("Error: ANTHROPIC_API_KEY not set.", file=sys.stderr)
+        print("Add it to .env or export ANTHROPIC_API_KEY='sk-ant-...'", file=sys.stderr)
         sys.exit(1)
 
     client = anthropic.Anthropic(api_key=api_key)

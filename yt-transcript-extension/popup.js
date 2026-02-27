@@ -73,6 +73,7 @@ btnGrab.addEventListener("click", async () => {
     });
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
+      world: "MAIN",
       func: fetchTranscriptFromPage,
       args: [currentVideoId],
     });
@@ -197,60 +198,104 @@ btnDownload.addEventListener("click", () => {
 });
 
 // =============================================
-// Transcript fetcher — runs in the page context
+// Transcript fetcher — runs in the MAIN world
+// of the YouTube page.
+//
+// Uses the same approach as youtube-transcript-api:
+// 1. Extract INNERTUBE_API_KEY from the page
+// 2. Call /youtubei/v1/player with Android client
+//    to get clean caption URLs (no broken exp= param)
+// 3. Fetch + parse the caption XML
 // =============================================
 async function fetchTranscriptFromPage(videoId) {
   try {
-    const pageResp = await fetch(
-      `https://www.youtube.com/watch?v=${videoId}`
-    );
-    const pageHtml = await pageResp.text();
+    // Step 1: Get the InnerTube API key from the page
+    const scripts = document.querySelectorAll("script");
+    let apiKey = null;
+    for (const s of scripts) {
+      const m = s.textContent.match(/"INNERTUBE_API_KEY":\s*"([a-zA-Z0-9_-]+)"/);
+      if (m) { apiKey = m[1]; break; }
+    }
+    if (!apiKey) {
+      return { error: "Could not find YouTube API key on page." };
+    }
 
-    // Find the captions JSON in the page source
-    const marker = '"captions":';
-    const idx = pageHtml.indexOf(marker);
-    if (idx === -1) {
+    // Step 2: Call InnerTube player API with Android client context
+    const playerResp = await fetch(
+      `https://www.youtube.com/youtubei/v1/player?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          context: {
+            client: { clientName: "ANDROID", clientVersion: "20.10.38" },
+          },
+          videoId: videoId,
+        }),
+      }
+    );
+
+    if (!playerResp.ok) {
+      return { error: `YouTube API returned ${playerResp.status}` };
+    }
+
+    const playerData = await playerResp.json();
+    const tracks =
+      playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+
+    if (!tracks || tracks.length === 0) {
       return { error: "No captions/transcript available for this video." };
     }
 
-    let captionsJson;
-    try {
-      // Walk from the opening brace, counting depth to find the matching close
-      const start = idx + marker.length;
-      let depth = 0;
-      let end = start;
-      for (let i = start; i < pageHtml.length; i++) {
-        if (pageHtml[i] === "{") depth++;
-        if (pageHtml[i] === "}") depth--;
-        if (depth === 0) { end = i + 1; break; }
-      }
-      captionsJson = JSON.parse(pageHtml.slice(start, end));
-    } catch {
-      return { error: "Could not parse caption data." };
-    }
-
-    const tracks =
-      captionsJson?.playerCaptionsTracklistRenderer?.captionTracks;
-    if (!tracks || tracks.length === 0) {
-      return { error: "No caption tracks found for this video." };
-    }
-
+    // Prefer English, fall back to first available
     const enTrack =
       tracks.find((t) => t.languageCode?.startsWith("en")) || tracks[0];
 
+    // Step 3: Fetch the caption XML
     const captionResp = await fetch(enTrack.baseUrl);
     const captionXml = await captionResp.text();
 
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(captionXml, "text/xml");
-    const textNodes = doc.querySelectorAll("text");
+    if (!captionXml || captionXml.length < 10) {
+      return { error: "Caption URL returned empty response." };
+    }
+
+    // Step 4: Parse XML with regex (DOMParser blocked by Trusted Types)
+    // Handles both formats:
+    //   Format A (srv1): <text start="..." dur="...">content</text>
+    //   Format B (srv3): <p t="..." d="..."><s>word</s></p> or <p>plain text</p>
+    const decode = (s) =>
+      s.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+       .replace(/&quot;/g, '"').replace(/&#39;/g, "'");
 
     const lines = [];
-    for (const node of textNodes) {
-      const tmp = document.createElement("span");
-      tmp.innerHTML = node.textContent;
-      const clean = tmp.textContent.trim();
-      if (clean) lines.push(clean);
+
+    if (captionXml.includes("<text")) {
+      const re = /<text[^>]*>([\s\S]*?)<\/text>/g;
+      let m;
+      while ((m = re.exec(captionXml)) !== null) {
+        const raw = decode(m[1]).replace(/\n/g, " ").trim();
+        if (raw) lines.push(raw);
+      }
+    } else {
+      const re = /<p[^>]*>([\s\S]*?)<\/p>/g;
+      let m;
+      while ((m = re.exec(captionXml)) !== null) {
+        const inner = m[1];
+        const parts = [];
+        const sRe = /<s[^>]*>([\s\S]*?)<\/s>/g;
+        let sm;
+        while ((sm = sRe.exec(inner)) !== null) {
+          parts.push(sm[1]);
+        }
+        const line = decode(
+          parts.length > 0 ? parts.join("") : inner.replace(/<[^>]*>/g, "")
+        ).trim();
+        if (line) lines.push(line);
+      }
+    }
+
+    if (lines.length === 0) {
+      return { error: "Transcript was empty." };
     }
 
     return { text: lines.join("\n") };
